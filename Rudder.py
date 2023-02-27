@@ -143,6 +143,7 @@ class LessonBuffer:
         if self.next_spot_to_add >= self.size:
             self.buffer_is_full = True
         self.next_spot_to_add = self.next_spot_to_add % self.size
+        # print(states)
         # print(states.squeeze())
         self.states_buffer[next_ind, :traj_length] = states.squeeze()
         self.states_buffer[next_ind, traj_length:] = 0

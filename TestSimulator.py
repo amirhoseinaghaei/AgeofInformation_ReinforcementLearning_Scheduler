@@ -108,4 +108,25 @@ handles, labels = plt.gca().get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 ax[1].legend(by_label.values(), by_label.keys(), loc='upper left')
 
-plt.show()
+
+ax[0].grid()
+ax[1].grid()
+ax[0].set_xlabel("Episode", fontsize = 22.0)
+ax[0].set_ylabel("Average AoI of Episode", fontsize = 22.0)
+ax[0].set_xlim(xmin=0, xmax=100)
+ax[1].set_xlabel("Episode", fontsize = 22.0)
+ax[1].set_ylabel("AoI difference", fontsize = 22.0)
+ax[1].set_xlim(xmin=0, xmax=100)
+# fig.suptitle("Results", fontweight ="bold") 
+  
+fig.savefig('SimulationResult_DDDQN_70_125_0.2_0.8.pdf')  
+
+print(f"Average AoI of each episode with AoI scheduler: {sum(Total_Reward_List)/NUM_EPISODE}")
+print(f"Average AoI of each episode when DT always send DT data back at request arrival: {sum(Total_Reward_List_Without_Optimal_Policy)/NUM_EPISODE}")
+print(f"Average AoI diiference: {sum(AoI_Difference_List)/NUM_EPISODE}")
+
+number_of_optimal_actions = 0
+for i in AoI_Difference_List:
+  if i > 0 or i < 0:
+      number_of_optimal_actions += 1 
+print(f"Accuracy is {(number_of_optimal_actions/len(AoI_Difference_List))*100}")
