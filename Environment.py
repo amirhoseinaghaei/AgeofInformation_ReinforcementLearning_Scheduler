@@ -36,14 +36,14 @@ class Environment(object):
         self.ADT_max = (self.B_max/min(self.WirelessChannelClass.Rate_List)) + (self.C_max/self.Fc)
 
     def CreateStates(self):
+        print("Amir")
         D = self.ADT_max - self.Au_min
-        Deadline = 25
         self.StateList = []
         for i in range(int(self.Au_min),int(self.Au_max)+1):
             if self.Au_min <= i <= self.W:
                 BT = 0
                 if self.Au_min <= i <= self.ADT_max + self.Au_min -1:
-                    U_max =Deadline 
+                    U_max = self.deadline 
                 self.StateList.append(State(f"({i}, Ch1, {BT}, {1}, {0})", Au= i, Ch ="Ch1" , BT = BT, Ra = 1, U = 0))
                 self.StateList.append(State(f"({i}, Ch2, {BT}, {1}, {0})", Au= i, Ch ="Ch2" , BT = BT, Ra = 1, U = 0))
                 for j in range(0,int(U_max)+1):
@@ -68,8 +68,8 @@ class Environment(object):
                 while crowler != last:
                     BT.append(int(crowler + D)) if crowler + D > 25 else None
                     crowler = crowler + D
-                if self.W <= i < Deadline + self.Au_min :
-                    U_max = Deadline
+                if self.W <= i < self.deadline + self.Au_min :
+                    U_max = self.deadline
                     for bt in BT:
                         self.StateList.append(State(f"({i}, Ch1, {bt}, {1}, {0})", Au= i, Ch ="Ch1" , BT = bt, Ra = 1, U = 0))
                         self.StateList.append(State(f"({i}, Ch2, {bt}, {1}, {0})", Au= i, Ch ="Ch2" , BT = bt, Ra = 1, U = 0))
@@ -77,7 +77,7 @@ class Environment(object):
                             self.StateList.append(State(f"({i}, Ch1, {bt}, {0}, {j})", Au= i, Ch ="Ch1" , BT = bt, Ra = 0, U = j))
                             self.StateList.append(State(f"({i}, Ch2, {bt}, {0}, {j})", Au= i, Ch ="Ch2" , BT = bt, Ra = 0, U = j))
                 else: 
-                    U_max = 25 
+                    U_max = self.deadline 
                     for bt in BT:
                         self.StateList.append(State(f"({i}, Ch1, {bt}, {1}, {0})", Au= i, Ch ="Ch1" , BT = bt, Ra = 1, U = 0))
                         self.StateList.append(State(f"({i}, Ch2, {bt}, {1}, {0})", Au= i, Ch ="Ch2" , BT = bt, Ra = 1, U = 0))
@@ -96,7 +96,7 @@ class Environment(object):
                 while crowler != last:
                     BT.append(int(crowler + D)) if crowler + D > 25 else None
                     crowler = crowler + D           
-                U_max = 25 
+                U_max = self.deadline 
                 for bt in BT:
                     self.StateList.append(State(f"({i}, Ch1, {bt}, {1}, {0})", Au= i, Ch ="Ch1" , BT = bt, Ra = 1, U = 0))
                     self.StateList.append(State(f"({i}, Ch2, {bt}, {1}, {0})", Au= i, Ch ="Ch2" , BT = bt, Ra = 1, U = 0))
@@ -110,7 +110,7 @@ class Environment(object):
                     while crowler != int(self.C_max - (i%self.W - ((self.B_max)/min(self.WirelessChannelClass.Rate_List)))*self.Fc):
                         BT.append(crowler + self.Fc)  
                         crowler = crowler + self.Fc             
-                U_max = 25 
+                U_max = self.deadline 
                 for bt in BT:
                     self.StateList.append(State(f"({i}, Ch1, {bt}, {1}, {0})", Au= i, Ch ="Ch1" , BT = bt, Ra = 1, U = 0))
                     self.StateList.append(State(f"({i}, Ch2, {bt}, {1}, {0})", Au= i, Ch ="Ch2" , BT = bt, Ra = 1, U = 0))
@@ -121,25 +121,30 @@ class Environment(object):
         self.initial_State  = []
         for i in self.StateList:
             if i.Ra == 1:
-                if i.BT == 100:
+
+                if 70 <= i.BT <= 125: 
                     self.initial_State.append(i)   
         self.Quality = {}
         
         for i in self.StateList:
             self.Quality[(i.Name , 0)] = 0
             self.Quality[(i.Name , 1)] = 0  
-        # for i in self.initial_State:
-            # print(i.Name)
+
+    def reset_state_with_state(self, state):
+        self.state = state
+        self.inital_state = copy.deepcopy(self.state)
+        return state
+   
     def reset_state(self):
         self.state = copy.deepcopy(random.choice(self.initial_State))
         self.inital_state = copy.deepcopy(self.state)
-        # print(self.inital_state.Name)
-        return np.array([self.state.Au, self.state.Ch, self.state.BT, self.state.Ra, self.state.U])
+        return np.array([self.state.Au, self.state.Ch, self.state.BT, self.state.Ra, self.state.U]), self.state
 
     def reset_paramter(self):
         self.Wait = 0
         self.time = 0
         self.updated = False
+        self.Sendback = 0
     def remained_BT_modification(self):
         if self.state.Au % self.W < self.W-1 and self.state.BT == 0:
             self.state.BT = 0
@@ -150,22 +155,32 @@ class Environment(object):
                 self.state.BT -= self.WirelessChannelClass.Rate_Dict[self.state.Ch]
             else:
                 self.state.BT -= self.Fc
-    def wireless_channel_modification(self):
-        random_generated = random.uniform(0, 1)
-        if self.state == "Ch1":
+    def generate_channel_state_list_for_whole_sequence(self ,input_ch):
+        self.ch_transition_list = [input_ch]
+        for i in range(self.deadline + 1):
+          random_generated = random.uniform(0, 1)
+          if input_ch == "Ch1":
             if random_generated < self.WirelessChannelClass.TransitionProbabilityMatrix[0][0]:
-                self.state.Ch = "Ch1"
+                self.ch_transition_list.append("Ch1")
             else:
-                self.state.Ch = "Ch2"
-        else:
-            if random_generated < 0.5:
-                self.state.Ch = "Ch1"
+                self.ch_transition_list.append("Ch2")
+          else:
+            if random_generated < self.WirelessChannelClass.TransitionProbabilityMatrix[1][0]:
+                self.ch_transition_list.append("Ch1")
             else:
-                self.state.Ch = "Ch2"
+                self.ch_transition_list.append("Ch2")
+        return self.ch_transition_list
+
+    def wireless_channel_modification(self, time):
+      if time < self.deadline + 1:
+        self.state.Ch = self.ch_transition_list[time]
+
     def request_pending_time_modification(self,action):
-        if action == 1:
-            self.state.U = 0
-        elif action == 0 and self.Sendback:
+        # if action == 1:
+        #     self.state.U = 0
+        # elif action == 0 and self.Sendback:
+        #     self.state.U = 0
+        if self.updated == True or action == 1:
             self.state.U = 0
         else: 
             self.state.U += 1
@@ -174,9 +189,9 @@ class Environment(object):
         if self.Wait == True:  
             if self.update == False:
                 self.state.Au += 1
-            elif self.update and action == 1:
+            elif self.update and self.Sendback:
                 self.state.Au += 1
-            elif self.update and action == 0:
+            elif self.update and self.Sendback == 0:
                 self.state.Au = self.state.Au % self.W + 1 
         else:
             self.updated = True
@@ -187,7 +202,7 @@ class Environment(object):
             self.Wait = True
     def state_transition(self, action):
             self.remained_BT_modification()
-            self.wireless_channel_modification()
+            self.wireless_channel_modification(self.time)
             self.request_pending_time_modification(action)
             self.state.Ra = 0
             self.AoI_modification(action)
@@ -201,17 +216,46 @@ class Environment(object):
         self.time += 1
         done = self.time == self.deadline
         self.update = self.state.BT == self.Fc
+        # if self.update and self.updated == False and self.Wait:
+        #     # print("updated")
+        #     self.updated = True
+        #     if self.inital_state.Au >= self.W and self.inital_state.BT != 0:
+        #             reward += self.W + (self.inital_state.Au)%(self.W)
+        #     else:
+        #         reward += (self.inital_state.Au)%(self.W)
+        #     reward -= (self.time + (self.state.Au)%(self.W) + 1)
         if self.update and self.updated == False and self.Wait:
-            # print("updated")
             self.updated = True
             if self.inital_state.Au >= self.W and self.inital_state.BT != 0:
-                    reward += self.W + (self.inital_state.Au)%(self.W)
+              reward += (self.W + (self.inital_state.Au)%(self.W) + self.time - (self.state.Au + 1)%(self.W)) \
+              *(self.deadline - (self.time))
+              reward -= (self.inital_state.Au - (self.W + (self.inital_state.Au)%(self.W)))* self.time
             else:
-                reward += (self.inital_state.Au)%(self.W)
-            reward -= (self.time + (self.state.Au)%(self.W) + 1)
+              reward += ((self.inital_state.Au)%(self.W) + self.time - (self.state.Au)%(self.W) + 1) \
+                    *(self.deadline - self.time)
+              reward -= (self.inital_state.Au - ((self.inital_state.Au)%(self.W)))* self.time
+        if self.update and self.updated == True and self.Sendback:
+            if self.inital_state.Au >= self.W and self.inital_state.BT != 0:
+              reward += (self.W + (self.inital_state.Au)%(self.W) + self.time - (self.state.Au + 1)%(self.W)) \
+              *(self.deadline - (self.time))
+              reward -= (self.inital_state.Au - (self.W + (self.inital_state.Au)%(self.W)))* self.time
+    
+            else:
+              reward += ((self.inital_state.Au)%(self.W) + self.time - (self.state.Au)%(self.W) + 1) \
+                    *(self.deadline - self.time)
+              reward -= (self.inital_state.Au - ((self.inital_state.Au)%(self.W)))* self.time
+            reward = -reward 
+
+        # if self.update and self.updated == True and self.Sendback:
+        #     if self.inital_state.Au >= self.W and self.inital_state.BT != 0:
+        #             reward -= self.W + (self.inital_state.Au)%(self.W)
+        #     else:
+        #         reward -= (self.inital_state.Au)%(self.W)
+        #     reward += (self.time + (self.state.Au)%(self.W) + 1)
         if done and self.Wait and self.updated == False:
-            reward += (self.inital_state.Au)%(self.W)
-            reward -= (self.time + ((self.state.Au + 1)%self.W + self.W))
+              reward += ((self.inital_state.Au)%(self.W) + self.time - (self.state.Au)%(self.W) + 1) \
+                    *(self.deadline - self.time)
+              reward -= (self.inital_state.Au - ((self.inital_state.Au)%(self.W)))* self.time
         self.state_transition(action)
         # print(np.array([self.state.Au, self.state.Ch, self.state.BT, 0, self.state.U ]))
         # Time.sleep(2)

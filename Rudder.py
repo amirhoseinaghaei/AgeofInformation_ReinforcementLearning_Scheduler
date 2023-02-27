@@ -30,10 +30,12 @@ class RRLSTM(nn.Module):
         self.lstm = LSTMLayer(in_features=state_input_size + n_actions, out_features=n_units,
                               w_ci=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False),
                               w_ig=(False, lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs)),
-                              w_og=False,
+                              # w_og=False,
+                              w_og=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False), 
                               b_ci=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
                               b_ig=lambda *args, **kwargs: nn.init.normal_(mean=-3, *args, **kwargs),
-                              b_og=False,
+                              # b_og=False,
+                              b_og=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
                               a_out=lambda x: x
                               )
         self.linear = nn.Linear(n_units, 1)
@@ -62,7 +64,7 @@ class RRLSTM(nn.Module):
 
     # Trains the LSTM until -on average- the main loss is below 0.25.
     def train(self, episode):
-        print("HI")
+        # print("HI")
         i = 0
         loss_average = 0.3
         mse_loss = MSELoss(reduction="none")
@@ -113,8 +115,7 @@ class RRLSTM(nn.Module):
             if main_loss_np > loss_average * 2:
                 loss_average = loss_np
             self.optimizer.step()
-        print("BYE")
-        time.sleep(2)
+        # print("BYE")
 
 class LessonBuffer:
     def __init__(self, size, deadline, state_variables):
@@ -142,7 +143,6 @@ class LessonBuffer:
         if self.next_spot_to_add >= self.size:
             self.buffer_is_full = True
         self.next_spot_to_add = self.next_spot_to_add % self.size
-        # print(states)
         # print(states.squeeze())
         self.states_buffer[next_ind, :traj_length] = states.squeeze()
         self.states_buffer[next_ind, traj_length:] = 0

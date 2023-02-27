@@ -11,7 +11,7 @@ class DefiningWirelessChannels(object):
         for x in range(self.NUM_Ch):
             row = []
             for y in range(self.NUM_Ch):
-                row.append(0.0 + x/5 + y*(1 - 2*(0.0 + x/5)))
+                row.append(0.2 + x/10 + y*(1 - 2*(0.2+ x/10)))
             self.TransitionProbabilityMatrix.append(row)
         print(self.TransitionProbabilityMatrix)
       
