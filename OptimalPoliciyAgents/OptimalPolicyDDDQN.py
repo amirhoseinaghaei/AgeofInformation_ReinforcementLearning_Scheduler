@@ -19,23 +19,23 @@ class DDDQNOptimalPolicyAgent(object):
         self.n_lstm = 16
         self.lstm_lr = 1e-2
         self.l2_regularization = 1e-6
-        self.rudder_lstm_a0 = LSTM(state_input_size=5, n_actions= 2, buffer= LessonBuffer(1000, 20, 5), n_units=self.n_lstm,
+        self.rudder_lstm_a0 = LSTM(state_input_size=5, n_actions= 2, buffer= LessonBuffer(1000, 50, 5), n_units=self.n_lstm,
                         lstm_lr=self.lstm_lr, l2_regularization=self.l2_regularization, return_scaling=10,
                         lstm_batch_size=8, continuous_pred_factor=0.5)
-        self.rudder_lstm_a1 = LSTM(state_input_size=5, n_actions= 2, buffer=LessonBuffer(1000, 20, 5), n_units=self.n_lstm,
+        self.rudder_lstm_a1 = LSTM(state_input_size=5, n_actions= 2, buffer=LessonBuffer(1000, 50, 5), n_units=self.n_lstm,
                         lstm_lr=self.lstm_lr, l2_regularization=self.l2_regularization, return_scaling=10,
                         lstm_batch_size=8, continuous_pred_factor=0.5)
 
-        self.rudder_lstm_a0.load_state_dict(torch.load('LSTM_Networks/rudder_lstm_70_125_wait_0.2.pt'))
-        self.rudder_lstm_a1.load_state_dict(torch.load('LSTM_Networks/rudder_lstm_70_125_send_0.2.pt'))
+        self.rudder_lstm_a0.load_state_dict(torch.load('rudder_lstm_500_wait_0.9.pt'))
+        self.rudder_lstm_a1.load_state_dict(torch.load('rudder_lstm_500_send_0.9.pt'))
         self.Dueling_Double_DQN_Agent = Dueling_DDQN_Agent(gamma=1, epsilon=1.0, lr=3e-4,
                         input_dims=[5], n_actions=2, mem_size=100000, eps_min=0.01,
                         batch_size=64, eps_dec=1e-3, replace=100)
-        self.environment = Environment(100,25)
+        self.environment = Environment(1000,100)
         self.environment.CreateStates()
     def FindOptimalPolicy(self):
         episode = 0
-        for i in tqdm(range(5000)):
+        for i in tqdm(range(8000)):
             episode += 1
             self.environment.reset_paramter()
             state, _ = self.environment.reset_state()
@@ -58,10 +58,11 @@ class DDDQNOptimalPolicyAgent(object):
                 action = self.Dueling_Double_DQN_Agent.choose_action(initial_state)
                 if self.environment.state.Ra == 0 and self.environment.state.U == 0:
                     action = 0
-                if self.environment.state.Ra == 0 and self.environment.state.U == 19:
-                    action = 1
                 if self.environment.state.U > 0:
                     action = 0
+                if self.environment.sendbackaction == True:
+                    action = 1
+                
                 state, reward, done = self.environment.step(action)
                 actions.append(action)
                 states.append(state)
@@ -85,7 +86,7 @@ class DDDQNOptimalPolicyAgent(object):
                         rewards = self.rudder_lstm_a0.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
                     if actions[0] == 1: 
                         rewards = self.rudder_lstm_a1.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    for i in range(20):
+                    for i in range(50):
                         self.Dueling_Double_DQN_Agent.store_transition(states[i], actions[i], rewards[i], states[i+1],
                                             dones[i])
                         self.Dueling_Double_DQN_Agent.learn()
@@ -109,9 +110,10 @@ class DDDQNOptimalPolicyAgent(object):
                 Optimal_Policy_Dict[name] = "wait"
             else:
                 Optimal_Policy_Dict[name] = "send"  
-        with open("Optimal_Policy_DictQ_learning_0.2_70_125.json", "w") as write_file:
+        with open("Optimal_Policy_DictDDDQN_0.9_500.json", "w") as write_file:
             json.dump(Optimal_Policy_Dict, write_file, indent=4)  
 
         return Optimal_Policy_Dict
 
-
+DDDQNAgent = DDDQNOptimalPolicyAgent()
+DDDQNAgent.FindOptimalPolicy()

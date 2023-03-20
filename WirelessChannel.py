@@ -11,10 +11,10 @@ class DefiningWirelessChannels(object):
         for x in range(self.NUM_Ch):
             row = []
             for y in range(self.NUM_Ch):
-                row.append(0.2 + x/10 + y*(1 - 2*(0.2+ x/10)))
+                row.append(0.9 + x/10  + y*(1 - 2*(0.9 + x/10)))
             self.TransitionProbabilityMatrix.append(row)
         print(self.TransitionProbabilityMatrix)
       
-WirelessChannel = DefiningWirelessChannels(2,[5,20])        
+WirelessChannel = DefiningWirelessChannels(2,[10,50])        
 WirelessChannel.Create_RateDict()   
 

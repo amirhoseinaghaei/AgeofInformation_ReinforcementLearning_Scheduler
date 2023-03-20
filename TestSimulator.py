@@ -27,12 +27,11 @@ environment.CreateStates()
 policy_updator  = PolicyUpdater(environment= environment, lr = policy_lr)
 Total_Reward_List = []
 Total_Reward_List_Without_Optimal_Policy = []
-# Opening JSON file
-# with open('Optimal_Policy_DictDDDeepQN_0.2_70_125.json') as json_file:
-#     Optimal_Policy_Dict = json.load(json_file)
+with open('Optimal_Policy_DictQ_learning_0.7_70_125.json') as json_file:
+    Optimal_Policy_Dict = json.load(json_file)
 
-OptimalPolicyAgent = DDDQNOptimalPolicyAgent()
-Optimal_Policy_Dict = OptimalPolicyAgent.FindOptimalPolicy()
+# OptimalPolicyAgent = DDDQNOptimalPolicyAgent()
+# Optimal_Policy_Dict = OptimalPolicyAgent.FindOptimalPolicy()
 
 for i in range(NUM_EPISODE):
     environment.reset_paramter()
@@ -51,8 +50,8 @@ for i in range(NUM_EPISODE):
         action = 1
         if environment.state.Ra == 0 and environment.state.U == 0:
           action = 0
-        if environment.state.Ra == 0 and environment.state.U == deadline - 1:
-          action = 1
+        # if environment.state.Ra == 0 and environment.state.U == deadline - 1:
+        #   action = 1
         if environment.state.U > 0:
           action = 0
         state, reward, done = environment.step(action)
@@ -75,10 +74,10 @@ for i in range(NUM_EPISODE):
           action  = 0 if Optimal_Policy_Dict[name] == 'wait' else 1 
         if environment.state.Ra == 0 and environment.state.U == 0:
           action = 0
-        if environment.state.Ra == 0 and environment.state.U == 24:
-          action = 1
         if environment.state.U > 0:
           action = 0
+        if environment.sendnackaction == True:
+          action = 1
         state, reward, done = environment.step(action)
 
         Episode_AoI.append(state[0])
@@ -104,22 +103,25 @@ ax[0].plot(Total_Reward_List, label ='Using AoI Scheduler', color = "g" ,mec = '
 ax[0].plot(Total_Reward_List_Without_Optimal_Policy, label ='Always sending back' , mec = 'r', mfc = 'w', color = "r", marker='.', markersize = 20,  linestyle = "solid", linewidth = 3)
 ax[0].legend(fontsize = 20, loc='upper left')
 ax[1].legend(fontsize = 20, loc='upper left')
-handles, labels = plt.gca().get_legend_handles_labels()
-by_label = dict(zip(labels, handles))
-ax[1].legend(by_label.values(), by_label.keys(), loc='upper left')
+# handles, labels = plt.gca().get_legend_handles_labels()
+# by_label = dict(zip(labels, handles))
+# ax[1].legend(by_label.values(), by_label.keys(), loc='upper left')
+
 
 
 ax[0].grid()
 ax[1].grid()
 ax[0].set_xlabel("Episode", fontsize = 22.0)
-ax[0].set_ylabel("Average AoI of Episode", fontsize = 22.0)
+ax[0].set_ylabel("Average AoI", fontsize = 22.0)
 ax[0].set_xlim(xmin=0, xmax=100)
 ax[1].set_xlabel("Episode", fontsize = 22.0)
-ax[1].set_ylabel("AoI difference", fontsize = 22.0)
+ax[1].set_ylabel("Average AoI difference", fontsize = 22.0)
 ax[1].set_xlim(xmin=0, xmax=100)
-# fig.suptitle("Results", fontweight ="bold") 
-  
-fig.savefig('SimulationResult_DDDQN_70_125_0.2_0.8.pdf')  
+string = "$P^{CH}_{11}$$ = 0.7, $$P^{CH}_{12}$$ = 0.3, $$P^{CH}_{21}$$ = 0.8, $$P^{CH}_{22}$$ = 0.2$"
+fig.suptitle(string, fontweight ="bold" , y = 0.95) 
+ax[0].set_title('a' , fontsize = 18)
+ax[1].set_title('b', fontsize = 18)
+fig.savefig('SimulationResult_DDDQN_70_125_0.7_0.3.pdf')  
 
 print(f"Average AoI of each episode with AoI scheduler: {sum(Total_Reward_List)/NUM_EPISODE}")
 print(f"Average AoI of each episode when DT always send DT data back at request arrival: {sum(Total_Reward_List_Without_Optimal_Policy)/NUM_EPISODE}")
@@ -130,3 +132,7 @@ for i in AoI_Difference_List:
   if i > 0 or i < 0:
       number_of_optimal_actions += 1 
 print(f"Accuracy is {(number_of_optimal_actions/len(AoI_Difference_List))*100}")
+
+
+
+plt.show()

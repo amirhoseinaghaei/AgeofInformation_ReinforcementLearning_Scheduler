@@ -66,10 +66,12 @@ class RRLSTM(nn.Module):
     def train(self, episode):
         # print("HI")
         i = 0
-        loss_average = 0.3
+        loss_average = 0.15
         mse_loss = MSELoss(reduction="none")
-        while loss_average > 0.15:
+        while loss_average > 0.1:
             # print(loss_average)
+            # if loss_average < 5:
+            #     print(loss_average)
             i += 1
             self.lstm_updates += 1
             self.optimizer.zero_grad()
@@ -134,7 +136,7 @@ class LessonBuffer:
         else:
             return np.unique(self.rewards_buffer[:self.next_spot_to_add, -1]).shape[0] > 1
     def full_enough(self):
-        return self.buffer_is_full or self.next_spot_to_add > 256  
+        return self.buffer_is_full or self.next_spot_to_add > 50  
     def add(self,states, actions, rewards):
         traj_length = states.shape[0]
         # print(traj_length)

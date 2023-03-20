@@ -6,7 +6,7 @@ from Rudder import RRLSTM as LSTM
 import torch
 import time as Time
 import random
-from PolicyUpdater import PolicyUpdater
+from PolicyUpdater import PolicyUpdater 
 
 lb_size = 2048
 n_lstm = 16
@@ -21,7 +21,7 @@ episode = 0
 rudder_lstm_a0 = LSTM(state_input_size=5, n_actions= 2, buffer=Lesson_buffer_a0, n_units=n_lstm,
                         lstm_lr=lstm_lr, l2_regularization=l2_regularization, return_scaling=10,
                         lstm_batch_size=8, continuous_pred_factor=0.5)
-# rudder_lstm_a0.load_state_dict(torch.load('rudder_lstm_general09.pt'))
+# rudder_lstm_a0.load_state_dict(torch.load('LSTM_Networks/rudder_lstm_70_125_send_0.7.pt'))
 environment = Environment(100,25)
 environment.CreateStates()
 policy_updator  = PolicyUpdater(environment= environment, lr = policy_lr)
@@ -40,10 +40,12 @@ for i in range(2500):
         action = 1
         if environment.state.Ra == 0 and environment.state.U == 0:
             action = 0
-        if environment.state.Ra == 0 and environment.state.U == 19:
-            action = 1
+        # if environment.state.Ra == 0 and environment.state.U == environment.time:
+        #     action = 1
         if environment.state.U > 0:
             action = 0
+        # if environment.sendnackaction == True:
+        #     action = 1
         state, reward, done = environment.step(action)
         actions.append(action)
         states.append(state)
@@ -70,7 +72,8 @@ for i in range(2500):
                         print(episode)
                         rudder_lstm_a0.train(episode=episode)
                     if episode >= 1800: 
-                        torch.save(rudder_lstm_a0.state_dict(), 'rudder_lstm_70_125_send_0.2.pt')
+                        torch.save(rudder_lstm_a0.state_dict(), 'LSTM_Networks/rudder_lstm_70_125_send_0.7.pt')
 
             rewards = rudder_lstm_a0.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
+    
 

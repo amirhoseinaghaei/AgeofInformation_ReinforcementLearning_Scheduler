@@ -11,13 +11,13 @@ import torch
 
 class Environment(object):
     
-    def __init__(self, B_max, C_max , WirelessChannelClass = DefiningWirelessChannels(2,[5,20]), K = 3 , W = 30 , Fc = 5):
+    def __init__(self, B_max, C_max , WirelessChannelClass = DefiningWirelessChannels(2,[20,100]), K = 4 , W = 60 , Fc = 10):
         
         self.inital_state = None
         self.state = None
         self.updated = True
         self.update = None
-        self.deadline = 25
+        self.deadline = 50
         self.time = None
         self.Wait = None
         self.Fc = Fc
@@ -32,16 +32,15 @@ class Environment(object):
     def ConfigureParameters(self):
         self.BT_max = self.C_max + self.B_max
         self.Au_min = (self.B_max/max(self.WirelessChannelClass.Rate_List)) + (self.C_max/self.Fc)
-        self.Au_max = self.W + self.W*self.K + (self.B_max/min(self.WirelessChannelClass.Rate_List)) + (self.C_max/self.Fc)
+        self.Au_max = self.W + self.W*self.K + (self.B_max/min(self.WirelessChannelClass.Rate_List)) + (self.C_max/self.Fc) +1 
         self.ADT_max = (self.B_max/min(self.WirelessChannelClass.Rate_List)) + (self.C_max/self.Fc)
 
     def CreateStates(self):
-        print("Amir")
-        D = self.ADT_max - self.Au_min
+        D = max(self.WirelessChannelClass.Rate_List) - min(self.WirelessChannelClass.Rate_List)
         self.StateList = []
         for i in range(int(self.Au_min),int(self.Au_max)+1):
             if self.Au_min <= i <= self.W:
-                BT = 0
+                BT = 0 
                 if self.Au_min <= i <= self.ADT_max + self.Au_min -1:
                     U_max = self.deadline 
                 self.StateList.append(State(f"({i}, Ch1, {BT}, {1}, {0})", Au= i, Ch ="Ch1" , BT = BT, Ra = 1, U = 0))
@@ -50,6 +49,7 @@ class Environment(object):
                     self.StateList.append(State(f"({i}, Ch1, {BT}, {0}, {j})", Au= i, Ch ="Ch1" , BT = BT, Ra = 0, U = j))
                     self.StateList.append(State(f"({i}, Ch2, {BT}, {0}, {j})", Au= i, Ch ="Ch2" , BT = BT, Ra = 0, U = j))
             if i >= self.W and 0 <= i%self.W <= self.Au_min:
+            # if i >= self.W and  i< self.C_max:
                 first = self.BT_max - (i%self.W)*max(self.WirelessChannelClass.Rate_List)
                 
                 if first < self.C_max : 
@@ -66,7 +66,7 @@ class Environment(object):
                 last = self.BT_max - (i%self.W)*min(self.WirelessChannelClass.Rate_List)
                 crowler = first
                 while crowler != last:
-                    BT.append(int(crowler + D)) if crowler + D > 25 else None
+                    BT.append(int(crowler + D)) if crowler + D > 100 else None
                     crowler = crowler + D
                 if self.W <= i < self.deadline + self.Au_min :
                     U_max = self.deadline
@@ -84,17 +84,17 @@ class Environment(object):
                         for j in range(0,int(U_max)+1):
                             self.StateList.append(State(f"({i}, Ch1, {bt}, {0}, {j})", Au= i, Ch ="Ch1" , BT = bt, Ra = 0, U = j))
                             self.StateList.append(State(f"({i}, Ch2, {bt}, {0}, {j})", Au= i, Ch ="Ch2" , BT = bt, Ra = 0, U = j))
-            if i> self.C_max and i%self.W > self.Au_min and i%self.W < self.B_max/min(self.WirelessChannelClass.Rate_List):
-                BT = [0,5,10,15,20,25]
+            if  i%self.W > self.Au_min and i%self.W < self.B_max/min(self.WirelessChannelClass.Rate_List):
+                BT = [0,10,20,30,40,50,60,70,80,90,100]
                 first = self.BT_max - (i%self.W)*max(self.WirelessChannelClass.Rate_List)
-                if first <= 25 : 
-                    BT = [0,5,10,15,20,25]
+                if first <= 100 : 
+                    BT = [0,10,20,30,40,50,60,70,80,90,100]
                 else:
                     BT = [first]
                 last = self.BT_max - (i%self.W)*min(self.WirelessChannelClass.Rate_List)
                 crowler = first
                 while crowler != last:
-                    BT.append(int(crowler + D)) if crowler + D > 25 else None
+                    BT.append(int(crowler + D)) if crowler + D > 100 else None
                     crowler = crowler + D           
                 U_max = self.deadline 
                 for bt in BT:
@@ -103,7 +103,7 @@ class Environment(object):
                     for j in range(0,int(U_max)+1):
                         self.StateList.append(State(f"({i}, Ch1, {bt}, {0}, {j})", Au= i, Ch ="Ch1" , BT = bt, Ra = 0, U = j))
                         self.StateList.append(State(f"({i}, Ch2, {bt}, {0}, {j})", Au= i, Ch ="Ch2" , BT = bt, Ra = 0, U = j))
-            if i> self.C_max and i%self.W > self.Au_min and i%self.W >= self.B_max/min(self.WirelessChannelClass.Rate_List):
+            if  i%self.W > self.Au_min and i%self.W >= self.B_max/min(self.WirelessChannelClass.Rate_List):
                 BT = [0]
                 crowler = 0
                 if int(self.C_max - (i%self.W - ((self.B_max)/min(self.WirelessChannelClass.Rate_List)))*self.Fc) > 0:
@@ -121,18 +121,27 @@ class Environment(object):
         self.initial_State  = []
         for i in self.StateList:
             if i.Ra == 1:
-
-                if 70 <= i.BT <= 125: 
+              #  i.BT == 100 or  i.BT == 120 or i.BT == 70 or  i.BT == 100
+                # if i.BT == 120 or i.BT == 50:
+                # if i.BT == 100 or  i.BT == 120 or i.BT == 70 or  i.BT == 50:
+                # if i.BT == 150 and i.Au == 105:
+                # if i.BT == 600 and i.Au == 125:
+                if i.BT == 500:
+                # if 120 <= i.BT <= 150: 
+                  # if i.Au == 31 or i.Au == 121:
                     self.initial_State.append(i)   
         self.Quality = {}
         
         for i in self.StateList:
             self.Quality[(i.Name , 0)] = 0
             self.Quality[(i.Name , 1)] = 0  
-
+        # for i in self.initial_State:
+            # print(i.Name)
+        print(len(self.StateList))
     def reset_state_with_state(self, state):
         self.state = state
         self.inital_state = copy.deepcopy(self.state)
+        # print(self.inital_state.Name)
         return state
    
     def reset_state(self):
@@ -145,6 +154,7 @@ class Environment(object):
         self.time = 0
         self.updated = False
         self.Sendback = 0
+        self.sendbackaction = False
     def remained_BT_modification(self):
         if self.state.Au % self.W < self.W-1 and self.state.BT == 0:
             self.state.BT = 0
@@ -152,7 +162,12 @@ class Environment(object):
             self.state.BT = self.BT_max
         else:
             if self.C_max < self.state.BT <= self.BT_max:
-                self.state.BT -= self.WirelessChannelClass.Rate_Dict[self.state.Ch]
+                if self.state.BT < self.C_max + max(self.WirelessChannelClass.Rate_List) and self.state.Ch == "Ch2":
+                  self.state.BT = self.C_max
+                elif self.state.BT < self.C_max + min(self.WirelessChannelClass.Rate_List) and self.state.Ch == "Ch1":
+                  self.state.BT = self.C_max
+                else:
+                  self.state.BT -= self.WirelessChannelClass.Rate_Dict[self.state.Ch]
             else:
                 self.state.BT -= self.Fc
     def generate_channel_state_list_for_whole_sequence(self ,input_ch):
@@ -224,11 +239,16 @@ class Environment(object):
         #     else:
         #         reward += (self.inital_state.Au)%(self.W)
         #     reward -= (self.time + (self.state.Au)%(self.W) + 1)
+        self.sendbackaction  = False
         if self.update and self.updated == False and self.Wait:
+            self.sendbackaction = True
             self.updated = True
             if self.inital_state.Au >= self.W and self.inital_state.BT != 0:
               reward += (self.W + (self.inital_state.Au)%(self.W) + self.time - (self.state.Au + 1)%(self.W)) \
               *(self.deadline - (self.time))
+              # print(self.W + (self.inital_state.Au)%(self.W) + self.time)
+              # print((self.state.Au + 1)%(self.W))
+              # print(self.deadline - (self.time))
               reward -= (self.inital_state.Au - (self.W + (self.inital_state.Au)%(self.W)))* self.time
             else:
               reward += ((self.inital_state.Au)%(self.W) + self.time - (self.state.Au)%(self.W) + 1) \
@@ -253,9 +273,11 @@ class Environment(object):
         #         reward -= (self.inital_state.Au)%(self.W)
         #     reward += (self.time + (self.state.Au)%(self.W) + 1)
         if done and self.Wait and self.updated == False:
+              self.sendbackaction = True
               reward += ((self.inital_state.Au)%(self.W) + self.time - (self.state.Au)%(self.W) + 1) \
                     *(self.deadline - self.time)
               reward -= (self.inital_state.Au - ((self.inital_state.Au)%(self.W)))* self.time
+
         self.state_transition(action)
         # print(np.array([self.state.Au, self.state.Ch, self.state.BT, 0, self.state.U ]))
         # Time.sleep(2)
