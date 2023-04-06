@@ -1,0 +1,13 @@
+{
+    "SimulationParameters": 
+    {
+        "NumberOfBits" : 1000, 
+        "NumberOfCPUCycles": 100,
+        "IntervalBetweenArrivals": 4,
+        "WindowSize": 60,
+        "CPUSpeed": 10, 
+        "NumberOfTransmissionChannels": 5,
+        "Deadline" : 50
+
+    }
+}

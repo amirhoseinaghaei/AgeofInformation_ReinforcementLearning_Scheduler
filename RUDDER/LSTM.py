@@ -1,21 +1,11 @@
-import numpy as np 
-import time
-import numpy as np
+from RUDDER.nn import LSTMLayer
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from nn import LSTMLayer
 from torch.autograd import Variable
 from torch.nn import MSELoss as MSELoss
+from Preprocessing import to_one_hot
 
-def to_one_hot(y, n_dims=None):
-    """ Take integer y (tensor or variable) with n dims and convert it to 1-hot representation with n+1 dims. """
-    y_tensor = y.data if isinstance(y, Variable) else y
-    y_tensor = y_tensor.type(torch.LongTensor).view(-1, 1)
-    n_dims = n_dims if n_dims is not None else int(torch.max(y_tensor)) + 1
-    y_one_hot = torch.zeros(y_tensor.size()[0], n_dims).scatter_(1, y_tensor, 1)
-    y_one_hot = y_one_hot.view(*y.shape, -1)
-    return Variable(y_one_hot) if isinstance(y, Variable) else y_one_hot
 
 class RRLSTM(nn.Module):
     def __init__(self, state_input_size, n_actions, buffer, n_units, lstm_lr, l2_regularization,
@@ -69,7 +59,7 @@ class RRLSTM(nn.Module):
         loss_average = 0.15
         mse_loss = MSELoss(reduction="none")
         while loss_average > 0.1:
-            # print(loss_average)
+            # # print(loss_average)
             # if loss_average < 5:
             #     print(loss_average)
             i += 1
@@ -118,47 +108,3 @@ class RRLSTM(nn.Module):
                 loss_average = loss_np
             self.optimizer.step()
         # print("BYE")
-
-class LessonBuffer:
-    def __init__(self, size, deadline, state_variables):
-        self.size = size 
-        self.states_buffer = np.empty(shape=(size, deadline + 1, state_variables))
-        self.actions_buffer = np.empty(shape=(size, deadline))
-        self.rewards_buffer = np.empty(shape=(size, deadline))
-        self.lens_buffer = np.empty(shape=(size, 1), dtype=np.int32)
-        self.next_spot_to_add = 0
-        self.buffer_is_full = False
-        self.samples_since_last_training = 0       
-    def different_returns_encountered(self):
-        if self.buffer_is_full:
-            # print(np.unique(self.rewards_buffer[..., -1]).shape[0] > 1)
-            return np.unique(self.rewards_buffer[..., -1]).shape[0] > 1
-        else:
-            return np.unique(self.rewards_buffer[:self.next_spot_to_add, -1]).shape[0] > 1
-    def full_enough(self):
-        return self.buffer_is_full or self.next_spot_to_add > 50  
-    def add(self,states, actions, rewards):
-        traj_length = states.shape[0]
-        # print(traj_length)
-        next_ind = self.next_spot_to_add
-        self.next_spot_to_add = self.next_spot_to_add + 1
-        if self.next_spot_to_add >= self.size:
-            self.buffer_is_full = True
-        self.next_spot_to_add = self.next_spot_to_add % self.size
-        # print(states)
-        # print(states.squeeze())
-        self.states_buffer[next_ind, :traj_length] = states.squeeze()
-        self.states_buffer[next_ind, traj_length:] = 0
-        self.actions_buffer[next_ind, :traj_length - 1] = actions
-        self.actions_buffer[next_ind, traj_length:] = 0
-        self.rewards_buffer[next_ind, :traj_length - 1] = rewards
-        self.rewards_buffer[next_ind, traj_length:] = 0
-        self.lens_buffer[next_ind] = traj_length
-    def sample(self, batch_size):
-        self.samples_since_last_training = 0
-        if self.buffer_is_full: 
-            indices = np.random.randint(0, self.size, batch_size)
-        else: 
-            indices = np.random.randint(0, self.next_spot_to_add, batch_size)
-        return (self.states_buffer[indices, :, :], self.actions_buffer[indices, :],
-                self.rewards_buffer[indices, :], self.lens_buffer[indices, :])
