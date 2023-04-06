@@ -1,7 +1,7 @@
 import numpy as np
 # from Rudder import LessonBuffer
 from Environment import Environment
-from WirelessChannel import DefiningWirelessChannels
+from WirelessChannel.WirelessChannel import DefiningWirelessChannels
 from Config import SimulationParameters
 from matplotlib import pyplot as plt
 from RUDDER.LSTM import RRLSTM as LSTM
