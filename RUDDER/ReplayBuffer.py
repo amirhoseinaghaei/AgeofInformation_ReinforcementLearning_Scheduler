@@ -1,3 +1,4 @@
+import time
 import numpy as np 
 
 
@@ -13,7 +14,6 @@ class LessonBuffer:
         self.samples_since_last_training = 0       
     def different_returns_encountered(self):
         if self.buffer_is_full:
-            # print(np.unique(self.rewards_buffer[..., -1]).shape[0] > 1)
             return np.unique(self.rewards_buffer[..., -1]).shape[0] > 1
         else:
             return np.unique(self.rewards_buffer[:self.next_spot_to_add, -1]).shape[0] > 1

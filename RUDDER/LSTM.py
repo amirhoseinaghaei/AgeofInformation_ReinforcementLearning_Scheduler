@@ -59,9 +59,9 @@ class RRLSTM(nn.Module):
         loss_average = 0.15
         mse_loss = MSELoss(reduction="none")
         while loss_average > 0.1:
-            # # print(loss_average)
+            # print(loss_average)
             # if loss_average < 5:
-            #     print(loss_average)
+            # print(loss_average)
             i += 1
             self.lstm_updates += 1
             self.optimizer.zero_grad()

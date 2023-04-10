@@ -1,7 +1,7 @@
 import numpy as np
 # from Rudder import LessonBuffer
 from Environment import Environment
-from WirelessChannel import DefiningWirelessChannels
+from WirelessChannel.WirelessChannel import DefiningWirelessChannels
 from Config import SimulationParameters
 from matplotlib import pyplot as plt
 import time as Time
@@ -13,9 +13,9 @@ from Dtos.StateDto import State
 import json
 
 class QlearningOptimalPolicy:
-    def __init__(self, env, redistributer, policy_lr, Num_Of_Episodes) -> None:
+    def __init__(self, env, redistributers, policy_lr, Num_Of_Episodes) -> None:
         self.env = env
-        self.reward_redistributer = redistributer
+        self.reward_redistributers = redistributers
         self.policy_updator  = PolicyUpdater(environment= env, lr = policy_lr)
         self.Num_Of_Episodes = Num_Of_Episodes
     def generate_optimnal_policy(self):
@@ -34,11 +34,10 @@ class QlearningOptimalPolicy:
             done = False
             name = f'({first_state[0]}, {first_state[1]}, {first_state[2]}, {first_state[3]}, {first_state[4]})'
             while not done:
-                action = 1
-                # if np.random.random() < 0.15:
-                #     action = np.random.choice(2) 
-                # else:
-                #     action = 0 if self.policy_updator.Quality[name,0] > self.policy_updator.Quality[name,1] else 1
+                if np.random.random() < 0.15:
+                    action = np.random.choice(2) 
+                else:
+                    action = 0 if self.policy_updator.Quality[name,0] > self.policy_updator.Quality[name,1] else 1
                 if self.env.state.Ra == 0 and self.env.state.U == 0:
                     action = 0
                 if self.env.state.U > 0:
@@ -56,12 +55,16 @@ class QlearningOptimalPolicy:
                     states = np.stack(states)
                     states = states.astype(int)
                     rewards = np.array(rewards, dtype = np.float32)
+                    # print(rewards)
                     actions = np.array(actions)
-                    if actions[0] == 1: 
-                        rewards = self.reward_redistributer.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    #     print(state)
-                    #     print(rewards)
-                    #     Time.sleep(5)
+                    rewards = self.reward_redistributers[actions[0]].redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
+                    # print(states)
+                    # print(rewards)
+                    # Time.sleep(2)
+                    if actions[0] == 0: 
+                        for i in range(len(rewards)):
+                            rewards[i] = 0
+ 
                     # else:
                     #     for i in range(len(rewards)):
                     #         rewards[i] = 0

@@ -160,10 +160,15 @@ class Environment(object):
     def generate_channel_state_list_for_whole_sequence(self ,input_ch):
         self.ch_transition_list = [input_ch]
         for i in range(self.deadline + 1):
-            row = int(input_ch.split("h")[1])
-            random_generated = random.randint(0, 4)
+            # row = int(input_ch.split("h")[1])
+            random = np.random.uniform(0,1)
+            if random < 0.5:
+            # random_generated = random.randint(0, self.WirelessChannelClass.NUM_Ch - 1)
             # if random_generated < self.WirelessChannelClass.TransitionProbabilityMatrix[row][0]:
-            self.ch_transition_list.append(f"Ch{random_generated+1}")
+                # self.ch_transition_list.append(f"Ch{random_generated+1}")
+                self.ch_transition_list.append("Ch1")
+            else:
+                self.ch_transition_list.append("Ch2")
             input_ch = self.ch_transition_list[-1]
 
         #   if input_ch == "Ch1":
