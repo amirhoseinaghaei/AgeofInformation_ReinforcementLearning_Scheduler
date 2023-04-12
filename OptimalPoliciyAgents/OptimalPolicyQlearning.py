@@ -37,7 +37,8 @@ class QlearningOptimalPolicy:
                 if np.random.random() < 0.15:
                     action = np.random.choice(2) 
                 else:
-                    action = 0 if self.policy_updator.Quality[name,0] > self.policy_updator.Quality[name,1] else 1
+                    # if self.policy_updator.Quality[name,0] > self.policy_updator.Quality[name,1] else 1
+                    action = 0 
                 if self.env.state.Ra == 0 and self.env.state.U == 0:
                     action = 0
                 if self.env.state.U > 0:
@@ -53,21 +54,15 @@ class QlearningOptimalPolicy:
                     for i in states: 
                         i[1] = i[1].split("h")[1]
                     states = np.stack(states)
-                    states = states.astype(int)
+                    states = states.astype(float).astype(int)
                     rewards = np.array(rewards, dtype = np.float32)
-                    # print(rewards)
                     actions = np.array(actions)
                     rewards = self.reward_redistributers[actions[0]].redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    # print(states)
-                    # print(rewards)
-                    # Time.sleep(2)
-                    if actions[0] == 0: 
+
+                    if actions[0] == 1: 
                         for i in range(len(rewards)):
                             rewards[i] = 0
- 
-                    # else:
-                    #     for i in range(len(rewards)):
-                    #         rewards[i] = 0
+
                     self.policy_updator.Q_learning(actions= actions , states = states, rewards= rewards)
 
         Optimal_Policy_Dict = {}

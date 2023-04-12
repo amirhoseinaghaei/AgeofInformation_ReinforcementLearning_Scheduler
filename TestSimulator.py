@@ -25,7 +25,6 @@ avg_window = 750
 UseOptimalPolicy = True
 episode = 0
 NUM_EPISODE = 5000
-deadline = 25
 episode = 0
 Training = False
 OptimalPolicyTraining = True
@@ -37,11 +36,11 @@ environment = Environment(simulationParameters.NumberOfBits, simulationParameter
 environment.CreateStates()
 Lesson_buffer_a0 = LessonBuffer(100000, simulationParameters.Deadline, 5)
 rudder_lstm_a0 = LSTM(state_input_size=5, n_actions= 2, buffer=Lesson_buffer_a0, n_units=n_lstm,
-                        lstm_lr=lstm_lr, l2_regularization=l2_regularization, return_scaling=1000,
+                        lstm_lr=lstm_lr, l2_regularization=l2_regularization, return_scaling=10000,
                         lstm_batch_size=32, continuous_pred_factor=0.5)
 Lesson_buffer_a1 = LessonBuffer(100000, simulationParameters.Deadline, 5)
 rudder_lstm_a1 = LSTM(state_input_size=5, n_actions= 2, buffer=Lesson_buffer_a0, n_units=n_lstm,
-                        lstm_lr=lstm_lr, l2_regularization=l2_regularization, return_scaling=1000,
+                        lstm_lr=lstm_lr, l2_regularization=l2_regularization, return_scaling=10000,
                         lstm_batch_size=32, continuous_pred_factor=0.5)
 
 RewardRedistributerGenerator = Reward_Redistributer(NUM_EPISODE, environment, [rudder_lstm_a0,rudder_lstm_a1])
@@ -76,7 +75,6 @@ for i in tqdm(range(100)):
 
     while not done:
         action  = 0 if Optimal_Policy_Dict_Qlearning[name] == 'wait' else 1
-        print(action)
         if environment.state.Ra == 0 and environment.state.U == 0:
           action = 0
         if environment.state.U > 0:
@@ -90,7 +88,7 @@ for i in tqdm(range(100)):
         rewards.append(reward) 
         if done: 
           Episode_AoI = [int(i) for i in Episode_AoI]
-          Total_Reward_List_With_Optimal_Policy.append(sum(Episode_AoI)/deadline)
+          Total_Reward_List_With_Optimal_Policy.append(sum(Episode_AoI)/simulationParameters.Deadline)
     rewards = []
     states = [first_state]
     Episode_AoI = [first_state[0]]
@@ -114,7 +112,7 @@ for i in tqdm(range(100)):
         rewards.append(reward) 
         if done: 
           Episode_AoI = [int(i) for i in Episode_AoI]
-          Total_Reward_List.append(sum(Episode_AoI)/deadline)
+          Total_Reward_List.append(sum(Episode_AoI)/simulationParameters.Deadline)
 
 fig, ax = plt.subplots(2,figsize=(12,11))
 ax[0].plot(Total_Reward_List, label ='Respond immediately', mec = 'r', mfc = 'w', color = "r", marker='.', markersize = 18,  linestyle = "solid", linewidth = 3)

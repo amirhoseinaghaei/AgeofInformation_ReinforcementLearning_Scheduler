@@ -6,7 +6,7 @@
         "IntervalBetweenArrivals": 4,
         "WindowSize": 60,
         "CPUSpeed": 10, 
-        "NumberOfTransmissionChannels": 2,
+        "NumberOfTransmissionChannels": 5,
         "Deadline" : 50
 
     }

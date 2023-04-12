@@ -1,4 +1,3 @@
-from RUDDER.nn import LSTMLayer
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,27 +16,43 @@ class RRLSTM(nn.Module):
         self.continuous_pred_factor = continuous_pred_factor
         self.n_actions = n_actions    
         # Forget gate and output gate are deactivated as used in the Atari games, see Appendix S4.2.1
-        self.lstm = LSTMLayer(in_features=state_input_size + n_actions, out_features=n_units,
-                              w_ci=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False),
-                              w_ig=(False, lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs)),
-                              # w_og=False,
-                              w_og=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False), 
-                              b_ci=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
-                              b_ig=lambda *args, **kwargs: nn.init.normal_(mean=-3, *args, **kwargs),
-                              # b_og=False,
-                              b_og=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
-                              a_out=lambda x: x
-                              )
+        # self.lstm = LSTMLayer(in_features=state_input_size + n_actions, out_features=n_units,
+        #                       w_ci=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False),
+        #                       w_ig=(False, lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs)),
+        #                       # w_og=False,
+        #                       w_og=(lambda *args, **kwargs: nn.init.normal_(mean=0, std=0.1, *args, **kwargs), False), 
+        #                       b_ci=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
+        #                       b_ig=lambda *args, **kwargs: nn.init.normal_(mean=-3, *args, **kwargs),
+        #                       # b_og=False,
+        #                       b_og=lambda *args, **kwargs: nn.init.normal_(mean=0, *args, **kwargs),
+        #                       a_out=lambda x: x
+        #                       )
+        self.lstm = nn.LSTM(input_size=state_input_size + n_actions, hidden_size=n_units, num_layers=1, batch_first=True)
         self.linear = nn.Linear(n_units, 1)
         self.optimizer = optim.Adam(self.parameters(), lr=lstm_lr, weight_decay=l2_regularization)
         self.lstm_updates = 0
+        #         states, actions = input
+        # actions = to_one_hot(actions, self.n_actions)
+        # actions = torch.cat((actions, torch.zeros((actions.shape[0], 1, self.n_actions))), 1)
+        # input = torch.cat((states, actions), 2)
+        # # Run the lstm
+        # lstm_out = self.lstm(input)
+        # return self.linear(lstm_out[0])
     def forward(self, input):
+        # states, actions = input
+        # actions = to_one_hot(actions, self.n_actions)
+        # actions = torch.cat((actions, torch.zeros((actions.shape[0], 1, self.n_actions))), 1)
+        # input = torch.cat((states, actions), 2)
+        # # Run the lstm
+        # lstm_out = self.lstm.forward(input, return_all_seq_pos=True)
+        # print(self.linear(lstm_out[0]).squeeze().shape)
+        # return self.linear(lstm_out[0])
         states, actions = input
         actions = to_one_hot(actions, self.n_actions)
         actions = torch.cat((actions, torch.zeros((actions.shape[0], 1, self.n_actions))), 1)
         input = torch.cat((states, actions), 2)
         # Run the lstm
-        lstm_out = self.lstm.forward(input, return_all_seq_pos=True)
+        lstm_out = self.lstm(input)
         return self.linear(lstm_out[0])
     def redistribute_reward(self, states, actions):
         # Prepare LSTM inputs
@@ -84,6 +99,7 @@ class RRLSTM(nn.Module):
             predicted_G0 = lstm_out.squeeze()
 
             # Loss calculations
+    
             all_timestep_loss = mse_loss(predicted_G0, returns.repeat(1, predicted_G0.size(1)))
 
             # Loss at any position in the sequence
