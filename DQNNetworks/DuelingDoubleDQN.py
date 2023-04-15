@@ -99,6 +99,8 @@ class Dueling_DDQN_Agent():
                                    chkpt_dir=self.chkpt_dir)
 
     def choose_action(self, observation):
+        observation[1] = int(observation[1].split("h")[1])
+        observation = observation.astype(float).astype(int)
         if np.random.random() > self.epsilon:
             state = T.tensor([observation],dtype=T.float).to(self.q_eval.device)
             _, advantage = self.q_eval.forward(state)

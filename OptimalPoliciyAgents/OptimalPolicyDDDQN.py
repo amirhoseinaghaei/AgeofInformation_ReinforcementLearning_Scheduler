@@ -1,119 +1,112 @@
-import sys
-sys.path.insert(0, '..')
+import copy
 import numpy as np
-from Rudder import LessonBuffer
+from DQNNetworks.DuelingDoubleDQN import Dueling_DDQN_Agent
+# from Rudder import LessonBuffer
 from Environment import Environment
-from Rudder import RRLSTM as LSTM
-import torch
+from WirelessChannel.WirelessChannel import DefiningWirelessChannels
+from Config import SimulationParameters
+from matplotlib import pyplot as plt
 import time as Time
+import torch
+from tqdm import tqdm
 import random
 from PolicyUpdater import PolicyUpdater
-from tqdm import tqdm
+from Dtos.StateDto import State
 import json
-from DQNAgents.DuelingDoubleDQN import Dueling_DDQN_Agent
-import torch as T
 
-
-class DDDQNOptimalPolicyAgent(object):
-    def __init__(self):
-        self.n_lstm = 16
-        self.lstm_lr = 1e-2
-        self.l2_regularization = 1e-6
-        self.rudder_lstm_a0 = LSTM(state_input_size=5, n_actions= 2, buffer= LessonBuffer(1000, 50, 5), n_units=self.n_lstm,
-                        lstm_lr=self.lstm_lr, l2_regularization=self.l2_regularization, return_scaling=10,
-                        lstm_batch_size=8, continuous_pred_factor=0.5)
-        self.rudder_lstm_a1 = LSTM(state_input_size=5, n_actions= 2, buffer=LessonBuffer(1000, 50, 5), n_units=self.n_lstm,
-                        lstm_lr=self.lstm_lr, l2_regularization=self.l2_regularization, return_scaling=10,
-                        lstm_batch_size=8, continuous_pred_factor=0.5)
-
-        self.rudder_lstm_a0.load_state_dict(torch.load('rudder_lstm_500_wait_0.9.pt'))
-        self.rudder_lstm_a1.load_state_dict(torch.load('rudder_lstm_500_send_0.9.pt'))
-        self.Dueling_Double_DQN_Agent = Dueling_DDQN_Agent(gamma=1, epsilon=1.0, lr=3e-4,
-                        input_dims=[5], n_actions=2, mem_size=100000, eps_min=0.01,
-                        batch_size=64, eps_dec=1e-3, replace=100)
-        self.environment = Environment(1000,100)
-        self.environment.CreateStates()
-    def FindOptimalPolicy(self):
+class DDDQNOptimalPolicy:
+    def __init__(self, env, redistributers, Num_Of_Episodes) -> None:
+        self.env = env
+        self.reward_redistributers = redistributers
+        self.DDDQN = Dueling_DDQN_Agent(gamma=1, epsilon=1.0, lr=3e-4,
+                  input_dims=[5], n_actions=2, mem_size=100000, eps_min=0.01,
+                  batch_size=64, eps_dec=1e-3, replace=100)
+        self.Num_Of_Episodes = Num_Of_Episodes
+    def generate_optimnal_policy(self):
+       
         episode = 0
-        for i in tqdm(range(8000)):
+        for i in tqdm(range(5000)):
+            self.env.reset_paramter()
+            state , fixed_State = self.env.reset_state()
+            first_state = copy.deepcopy(state)
+            
+            self.env.generate_channel_state_list_for_whole_sequence(state[1])
             episode += 1
-            self.environment.reset_paramter()
-            state, _ = self.environment.reset_state()
-            self.environment.generate_channel_state_list_for_whole_sequence(state[1])
+            # first_state[1] = int(first_state[1].split("h")[1])
+            # first_state = first_state.astype(float).astype(int)
             rewards = []
-            states = [state]
+            states = [first_state]
+            Episode_AoI = [first_state[0]]
             actions = []
             dones = []
-            done = False
-            name = f'({state[0]}, {state[1]}, {state[2]}, {state[3]}, {state[4]})'
 
-            initial_state= state
-            if initial_state[1] == "Ch1":
-                initial_state[1] = 1
-            else:
-                initial_state[1] = 0
-            initial_state = initial_state.astype(int)
+            done = False
+            name = f'({first_state[0]}, {first_state[1]}, {first_state[2]}, {first_state[3]}, {first_state[4]})'
 
             while not done:
-                action = self.Dueling_Double_DQN_Agent.choose_action(initial_state)
-                if self.environment.state.Ra == 0 and self.environment.state.U == 0:
+
+                new_state = copy.deepcopy(state)
+                action = self.DDDQN.choose_action(new_state)
+                if self.env.state.Ra == 0 and self.env.state.U == 0:
                     action = 0
-                if self.environment.state.U > 0:
+                if self.env.state.U > 0:
                     action = 0
-                if self.environment.sendbackaction == True:
+                if self.env.sendbackaction == True:
                     action = 1
-                
-                state, reward, done = self.environment.step(action)
+                state, reward, done = self.env.step(action)
+                # print(state)
+                Episode_AoI.append(state[0])
                 actions.append(action)
                 states.append(state)
                 rewards.append(reward) 
                 dones.append(done)
+
                 if done: 
-                    res = np.nonzero(rewards)[0]
-                    if len(res) > 0 :
-                        rewards[-1] = rewards[res[0]]
-                        rewards[res[0]] = 0   
+                    # states[0][1] = int(states[0][1].split("h")[1]) 
+                    # states[0] = states[0].astype(float).astype(int)
+                    # states[-1][1] = int(states[-1][1].split("h")[1]) 
+                    # states[-1] = states[-1].astype(float).astype(int)
                     for i in states: 
-                        if i[1] == "Ch1":
-                            i[1] = 1
-                        else:
-                            i[1] = 0
+                        i[1] = i[1].split("h")[1]
+                    # for i in states: 
+                    #     print(i)
+                    #     i[1] = i[1].split("h")[1]
                     states = np.stack(states)
-                    states = states.astype(int)
+                    # print(states)
+
+                    states = states.astype(float).astype(int)
                     rewards = np.array(rewards, dtype = np.float32)
                     actions = np.array(actions)
-                    if actions[0] == 0: 
-                        rewards = self.rudder_lstm_a0.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    if actions[0] == 1: 
-                        rewards = self.rudder_lstm_a1.redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    for i in range(50):
-                        self.Dueling_Double_DQN_Agent.store_transition(states[i], actions[i], rewards[i], states[i+1],
-                                            dones[i])
-                        self.Dueling_Double_DQN_Agent.learn()
+                    rewards = self.reward_redistributers[actions[0]].redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
+           
+                    for i in range(self.env.deadline):
+                            self.DDDQN.store_transition(states[i], actions[i], rewards[i], states[i+1],
+                                    dones[i])
+                            self.DDDQN.learn()
+
         Optimal_Policy_Dict = {}
-        for state in self.environment.initial_State:
+        # for keys, value in tqdm(self.policy_updator.Quality.items()):
+
+        #         if self.policy_updator.Quality[keys[0],0] > self.policy_updator.Quality[keys[0],1]:  
+        #             Optimal_Policy_Dict[keys[0]] = f"wait: {self.policy_updator.Quality[keys[0],0]}"
+        #         else:
+        #             Optimal_Policy_Dict[keys[0]] = f"send: {self.policy_updator.Quality[keys[0],1]}"
+        # with open(f"OptimalPolicies/Qlearning/Optimal_Policy_Qlearning_{self.env.B_max}.json", "w") as write_file:
+        #     json.dump(Optimal_Policy_Dict, write_file, indent=4)
+
+        for state in self.env.initial_State:
             State  =  np.array([state.Au, state.Ch, state.BT, state.Ra, state.U])
-            if State[1] == "Ch1":
-                State[1] = 1
-            else:
-                State[1] = 0
-            State = State.astype(int) 
-            state = T.tensor([State],dtype=T.float).to(self.Dueling_Double_DQN_Agent.q_eval.device)
-            _, advantage =  self.Dueling_Double_DQN_Agent.q_eval.forward(state)
-            action = T.argmax(advantage).item()
-            if State[1] == 1:
-                CH_NAME = "Ch1"
-            else:
-                CH_NAME = "Ch2"
-            name = f'({State[0]}, {CH_NAME}, {State[2]}, {State[3]}, {State[4]})'
+            State[1] = State[1].split("h")[1]
+            State = State.astype(float).astype(int) 
+            state = torch.tensor([State],dtype=torch.float).to(self.DDDQN.q_eval.device)
+            _, advantage =   self.DDDQN.q_eval.forward(state)
+            action = torch.argmax(advantage).item()
+            name = f'({State[0]}, {f"Ch{State[1]}"}, {State[2]}, {State[3]}, {State[4]})'
             if action == 0:
-                Optimal_Policy_Dict[name] = "wait"
+                Optimal_Policy_Dict[name] = f"wait: {advantage}"
             else:
-                Optimal_Policy_Dict[name] = "send"  
-        with open("Optimal_Policy_DictDDDQN_0.9_500.json", "w") as write_file:
-            json.dump(Optimal_Policy_Dict, write_file, indent=4)  
+                Optimal_Policy_Dict[name] = f"send: {advantage}"  
+        with open(f"OptimalPolicies/DDDQN/Optimal_Policy_DDDQN_{self.env.B_max}.json", "w") as write_file:
+            json.dump(Optimal_Policy_Dict, write_file, indent=4)
 
-        return Optimal_Policy_Dict
-
-DDDQNAgent = DDDQNOptimalPolicyAgent()
-DDDQNAgent.FindOptimalPolicy()
+        return self.DDDQN

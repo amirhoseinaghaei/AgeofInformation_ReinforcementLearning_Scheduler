@@ -21,7 +21,7 @@ class QlearningOptimalPolicy:
     def generate_optimnal_policy(self):
        
         episode = 0
-        for i in tqdm(range(self.Num_Of_Episodes)):
+        for i in tqdm(range(5000000)):
             self.env.reset_paramter()
             state , fixed_State = self.env.reset_state()
             first_state = state
@@ -53,36 +53,28 @@ class QlearningOptimalPolicy:
                     for i in states: 
                         i[1] = i[1].split("h")[1]
                     states = np.stack(states)
-                    states = states.astype(int)
+                    states = states.astype(float).astype(int)
                     rewards = np.array(rewards, dtype = np.float32)
-                    # print(rewards)
                     actions = np.array(actions)
                     rewards = self.reward_redistributers[actions[0]].redistribute_reward(states=np.expand_dims(states, 0),actions=np.expand_dims(actions, 0))[0, :]
-                    # print(states)
-                    # print(rewards)
-                    # Time.sleep(2)
-                    if actions[0] == 0: 
-                        for i in range(len(rewards)):
-                            rewards[i] = 0
- 
-                    # else:
-                    #     for i in range(len(rewards)):
-                    #         rewards[i] = 0
+
+         
+
                     self.policy_updator.Q_learning(actions= actions , states = states, rewards= rewards)
-
         Optimal_Policy_Dict = {}
-        for keys, value in self.policy_updator.Quality.items():
+        for keys, value in tqdm(self.policy_updator.Quality.items()):
                 initial_StateName = []
-                for i in self.env.initial_State:
-                    initial_StateName.append(i.Name) 
-                if keys[0] in initial_StateName: 
-                    print(f"Waiting_Qvalue {keys[0]}: {self.policy_updator.Quality[keys[0],0]}")
-                    print(f"Sending_Qvalue {keys[0]}: {self.policy_updator.Quality[keys[0],1]}")
+                # for i in self.env.initial_State:
+                #     initial_StateName.append(i.Name) 
+                # if keys[0] in initial_StateName: 
+                    # print(f"Waiting_Qvalue {keys[0]}: {self.policy_updator.Quality[keys[0],0]}")
+                    # print(f"Sending_Qvalue {keys[0]}: {self.policy_updator.Quality[keys[0],1]}")
 
-                    if self.policy_updator.Quality[keys[0],0] > self.policy_updator.Quality[keys[0],1]:  
-                        Optimal_Policy_Dict[keys[0]] = "wait"
-                    else:
-                        Optimal_Policy_Dict[keys[0]] = "send"
+                if self.policy_updator.Quality[keys[0],0] > self.policy_updator.Quality[keys[0],1]:  
+                    Optimal_Policy_Dict[keys[0]] = f"wait: {self.policy_updator.Quality[keys[0],0]}"
+                else:
+                    Optimal_Policy_Dict[keys[0]] = f"send: {self.policy_updator.Quality[keys[0],1]}"
         with open(f"OptimalPolicies/Qlearning/Optimal_Policy_Qlearning_{self.env.B_max}.json", "w") as write_file:
             json.dump(Optimal_Policy_Dict, write_file, indent=4)
 
+        return self.policy_updator.Quality

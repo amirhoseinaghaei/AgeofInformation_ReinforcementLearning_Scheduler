@@ -46,7 +46,7 @@ class Environment(object):
                     self.StateList.append(State(f"({i}, {key}, {BT}, {1}, {0})", Au= i, Ch = key , BT = BT, Ra = 1, U = 0))
                 for j in range(0,int(U_max)+1):
                     for key in self.WirelessChannelClass.Rate_Dict.keys():
-                        self.StateList.append(State(f"({i}, {key}, {BT}, {1}, {0})", Au= i, Ch = key , BT = BT, Ra = 1, U = 0))
+                        self.StateList.append(State(f"({i}, {key}, {BT}, {0}, {j})", Au= i, Ch = key , BT = BT, Ra = 0, U = j))
             if i >= self.W and 0 <= i%self.W <= self.Au_min:
                 first = self.BT_max - (i%self.W)*max(self.WirelessChannelClass.Rate_List)
                 
@@ -73,7 +73,7 @@ class Environment(object):
                             self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
                         for j in range(0,int(U_max)+1):
                             for key in self.WirelessChannelClass.Rate_Dict.keys():
-                                self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
+                                self.StateList.append(State(f"({i}, {key}, {bt}, {0}, {j})", Au= i, Ch = key , BT = bt, Ra = 0, U = j))
                 else: 
                     U_max = self.deadline 
                     for bt in BT:
@@ -81,7 +81,7 @@ class Environment(object):
                             self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
                         for j in range(0,int(U_max)+1):
                             for key in self.WirelessChannelClass.Rate_Dict.keys():
-                                self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
+                                self.StateList.append(State(f"({i}, {key}, {bt}, {0}, {j})", Au= i, Ch = key , BT = bt, Ra = 0, U = j))
             if  i%self.W > self.Au_min and i%self.W < self.B_max/min(self.WirelessChannelClass.Rate_List):
                 BT = [0,10,20,30,40,50,60,70,80,90,100]
                 first = self.BT_max - (i%self.W)*max(self.WirelessChannelClass.Rate_List)
@@ -100,7 +100,7 @@ class Environment(object):
                         self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
                     for j in range(0,int(U_max)+1):
                         for key in self.WirelessChannelClass.Rate_Dict.keys():
-                            self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
+                            self.StateList.append(State(f"({i}, {key}, {bt}, {0}, {j})", Au= i, Ch = key , BT = bt, Ra = 0, U = j))
             if  i%self.W > self.Au_min and i%self.W >= self.B_max/min(self.WirelessChannelClass.Rate_List):
                 BT = [0]
                 crowler = 0
@@ -114,19 +114,23 @@ class Environment(object):
                         self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
                     for j in range(0,int(U_max)+1):
                         for key in self.WirelessChannelClass.Rate_Dict.keys():
-                            self.StateList.append(State(f"({i}, {key}, {bt}, {1}, {0})", Au= i, Ch = key , BT = bt, Ra = 1, U = 0))
+                            self.StateList.append(State(f"({i}, {key}, {bt}, {0}, {j})", Au= i, Ch = key , BT = bt, Ra = 0, U = j))
 
         self.initial_State  = []
+        for i in self.StateList[0:100]:
+            print(i.Name)
+
         for i in self.StateList:
             if i.Ra == 1:
-                if i.BT == 520:
                     self.initial_State.append(i)   
         self.Quality = {}
         
         for i in self.StateList:
             self.Quality[(i.Name , 0)] = 0
             self.Quality[(i.Name , 1)] = 0  
+        print(len(self.initial_State))
         print(len(self.StateList))
+
     def reset_state_with_state(self, state):
         self.state = state
         self.inital_state = copy.deepcopy(self.state)
@@ -150,25 +154,44 @@ class Environment(object):
             self.state.BT = self.BT_max
         else:
             if self.C_max < self.state.BT <= self.BT_max:
-             
-                if self.state.BT - self.WirelessChannelClass.Rate_Dict[self.state.Ch] < 100:
+                # print(self.state.Ch)
+                if self.state.BT - self.WirelessChannelClass.Rate_Dict[self.state.Ch] < self.C_max:
                   self.state.BT = self.C_max
                 else:
                   self.state.BT -= self.WirelessChannelClass.Rate_Dict[self.state.Ch]
             else:
                 self.state.BT -= self.Fc
+
     def generate_channel_state_list_for_whole_sequence(self ,input_ch):
         self.ch_transition_list = [input_ch]
         for i in range(self.deadline + 1):
-            # row = int(input_ch.split("h")[1])
             random = np.random.uniform(0,1)
-            if random < 0.5:
-            # random_generated = random.randint(0, self.WirelessChannelClass.NUM_Ch - 1)
-            # if random_generated < self.WirelessChannelClass.TransitionProbabilityMatrix[row][0]:
-                # self.ch_transition_list.append(f"Ch{random_generated+1}")
-                self.ch_transition_list.append("Ch1")
-            else:
-                self.ch_transition_list.append("Ch2")
+            cumulated_prob = 0
+            next_channel = 0
+            for i in range(len(self.WirelessChannelClass.TransitionProbabilityMatrix[int(input_ch.split("h")[1]) - 1])):
+                cumulated_prob += self.WirelessChannelClass.TransitionProbabilityMatrix[int(input_ch.split("h")[1]) - 1][i]
+                if random < cumulated_prob:
+                    next_channel = f"Ch{i+1}" 
+
+                    cumulated_prob
+                    break
+            cumulated_prob = 0
+            self.ch_transition_list.append(next_channel)
+
+            # if random < 0.5:
+            # if input_ch == "Ch1":
+            # # random_generated = random.randint(0, self.WirelessChannelClass.NUM_Ch - 1)
+            #     if random < self.WirelessChannelClass.TransitionProbabilityMatrix[int(input_ch.split("h")[1]) - 1][0]:
+            #         # self.ch_transition_list.append(f"Ch{random_generated+1}")
+            #         self.ch_transition_list.append("Ch1")
+            #     else:
+            #         self.ch_transition_list.append("Ch2")
+            # else:
+            #     if random < self.WirelessChannelClass.TransitionProbabilityMatrix[int(input_ch.split("h")[1]) - 1][0]:
+            #         # self.ch_transition_list.append(f"Ch{random_generated+1}")
+            #         self.ch_transition_list.append("Ch1")
+            #     else:
+            #         self.ch_transition_list.append("Ch2")              
             input_ch = self.ch_transition_list[-1]
 
         #   if input_ch == "Ch1":
